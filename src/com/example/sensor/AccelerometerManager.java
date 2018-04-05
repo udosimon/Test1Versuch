@@ -136,6 +136,8 @@ public class AccelerometerManager {
         private long timeDiff = 0;
         private long lastUpdate = 0;
         private long lastShake = 0;
+        private long lastFlip = 0;
+        private long waitNexFlip = 1;
   
         private float x = 0;
         private float y = 0;
@@ -164,6 +166,7 @@ public class AccelerometerManager {
             if (lastUpdate == 0) {
                 lastUpdate = now;
                 lastShake = now;
+                lastFlip = now;
                 lastX = x;
                 lastY = y;
                 lastZ = z;
@@ -174,6 +177,21 @@ public class AccelerometerManager {
                 timeDiff = now - lastUpdate;
                 
                 if (timeDiff > 0) { 
+                	if ((now - lastFlip) >= (interval*waitNexFlip)) {
+                		if (z < 0) {
+                			listener.flipDown();
+                			waitNexFlip = 1000000;
+                			lastFlip = now;
+                		} else if (z > 20) {
+                			listener.flipUp();
+                			waitNexFlip = 1000000;
+                			lastFlip = now;
+                		} else {
+                			waitNexFlip = 1;
+                			lastFlip = now;
+                		}
+                	}
+
                      
                     /*force = Math.abs(x + y + z - lastX - lastY - lastZ) 
                                 / timeDiff;*/

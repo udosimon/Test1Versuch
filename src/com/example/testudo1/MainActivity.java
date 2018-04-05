@@ -9,10 +9,13 @@ import java.util.List;
 import com.example.sensor.AccelerometerListener;
 import com.example.sensor.AccelerometerManager;
 
+import android.content.Context;
 import android.content.pm.ActivityInfo;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.Canvas;
 import android.graphics.Color;
+import android.graphics.Paint;
 import android.graphics.Point;
 import android.graphics.Rect;
 import android.graphics.drawable.BitmapDrawable;
@@ -24,6 +27,7 @@ import android.os.Bundle;
 import android.view.Display;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.MotionEvent;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.view.ViewGroup;
@@ -32,6 +36,7 @@ import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.LinearLayout.LayoutParams;
+import android.widget.RelativeLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -45,7 +50,11 @@ public class MainActivity extends AppCompatActivity implements AccelerometerList
 	private TextView textViewX;
 	private TextView textViewY;
 	private TextView textViewZ;
+	private TextView textViewZ2;
 	private TextView textViewShake;
+	
+	private RelativeLayout mLayout;
+	private MyView myView;
 	
 	private boolean isShaked = true;
 	private boolean isStartMoveButton = false;
@@ -82,8 +91,22 @@ public class MainActivity extends AppCompatActivity implements AccelerometerList
 		textViewX = (TextView) findViewById(R.id.textViewX);
 		textViewY = (TextView) findViewById(R.id.textViewY);
 		textViewZ = (TextView) findViewById(R.id.textViewZ);
+		textViewZ2 = (TextView) findViewById(R.id.textViewZ2);
 		textViewShake = (TextView) findViewById(R.id.textViewShake);
-
+		
+		mLayout = (RelativeLayout)findViewById(R.id.activity_main);
+		myView = new MyView(this);
+//		myView.setX(100);
+//		myView.setY(300);
+//		myView.setRight(100);
+		mLayout.addView(myView);
+		myView.setCircle();
+		
+		textViewZ.setX(55);
+		textViewZ.setY(355);
+		textViewZ.setText("DDDDDEEEEEFFFFF");
+		myView.setOnTouchListener(handleTouch);
+		
 		
 		WindowManager w = this.getWindowManager();
 		Display d = w.getDefaultDisplay();
@@ -134,7 +157,7 @@ public class MainActivity extends AppCompatActivity implements AccelerometerList
 				text = text + "Display:"+displayWidth+"/"+displayHeight
 						+"\n Button:"+movedWidth+"/"+movedHeight
 						+"\n Button2:"+buttonMove.getWidth()+"/"+buttonMove.getHeight();
-				Log.i("Output", "Button Click "+text);
+				Log.e("Output", "Button Click "+text);
 				
 				SensorManager sMgr = (SensorManager)MainActivity.this.getSystemService(SENSOR_SERVICE);
 				List<Sensor> list = sMgr.getSensorList(Sensor.TYPE_LIGHT);
@@ -143,11 +166,14 @@ public class MainActivity extends AppCompatActivity implements AccelerometerList
 					Log.i("Activity","Sensor:"+sensor.getName());
 					st += sensor.getName()+"\n";
    				}
-		        Toast.makeText(getBaseContext(), st, 
-	                    Toast.LENGTH_LONG).show();
+//		        Toast.makeText(getBaseContext(), st, 
+//	                    Toast.LENGTH_LONG).show();
 				Log.i("Output", "Button Click3 "+st);
 
-				textView1.setText(text);
+//				textView1.setText(text);
+				
+				myView.incRadius();
+				myView.invalidate();
 				
 			}
 
@@ -166,7 +192,7 @@ public class MainActivity extends AppCompatActivity implements AccelerometerList
         if (AccelerometerManager.isSupported(this)) {
              
             //Start Accelerometer Listening
-            AccelerometerManager.startListening(this);
+            AccelerometerManager.startListening(this, 10, 200);
             Log.i("Activity", "onResume -> support");
         }
 		movedHeight = buttonMove.getHeight();
@@ -246,18 +272,56 @@ public class MainActivity extends AppCompatActivity implements AccelerometerList
 		
 		textViewX.setText("" + rundX);
 		textViewY.setText("" + rundY);
-		textViewZ.setText("" + rundZ);
+		textViewZ.setText("> " + rundZ);
 		
 		doMoveButton(rundX, rundY);
 	}
 
 	@Override
+	public void flipUp() {
+		textViewZ2.setText("UP\n" +textViewZ2.getText());
+//		buttonMove.setBackgroundColor(Color.MAGENTA);
+//		buttonMove.setHeight(buttonMove.getHeight()+22);
+//		buttonMove.setWidth(buttonMove.getWidth()+22);
+		myView.incRadius();
+	}
+
+	@Override
+	public void flipDown() {
+		textViewZ2.setText("DOWN\n" +textViewZ2.getText());
+//		buttonMove.setBackgroundColor(Color.GREEN);
+//		buttonMove.setHeight(buttonMove.getHeight()-22);
+//		buttonMove.setWidth(buttonMove.getWidth()-22);
+		myView.decRadius();
+	}
+
+	@Override
+	public void onAccelerationChangedInt(float x, float y, float z) {
+		// auf 1 Stelle hinter dem Komma kürzen
+		float rundZ = (float)(((int)(z*10))/10.0);
+		
+		if (rundZ < 0.6) {
+			textViewZ2.setText(rundZ +"\n" +textViewZ2.getText());	
+			buttonMove.setBackgroundColor(Color.GREEN);
+			buttonMove.setHeight(buttonMove.getHeight()-22);
+			buttonMove.setWidth(buttonMove.getWidth()-22);
+		} else if (rundZ > 20.2) {
+			textViewZ2.setText(rundZ +"\n" +textViewZ2.getText());
+			buttonMove.setBackgroundColor(Color.MAGENTA);
+			buttonMove.setHeight(buttonMove.getHeight()+22);
+			buttonMove.setWidth(buttonMove.getWidth()+22);
+		}
+		
+		
+	}
+
+	@Override
 	public void onShake(float force) {
 		if (isShaked) {
-			textViewShake.setText("XXXXXXXXXXXXXXXXXXXXXXXXXXXXX");
+			textViewShake.setText("XXXXXXXXXXXXXXXXXXXXXXXXXXXXX "+force);
 			isShaked = false;
 		} else {
-			textViewShake.setText("-----------------------------");
+			textViewShake.setText("----------------------------- "+force);
 			isShaked = true;
 		}
 		
@@ -355,7 +419,34 @@ public class MainActivity extends AppCompatActivity implements AccelerometerList
 		buttonMove.setX(x);
 		buttonMove.setY(y);
 		
-		
 	}
+	
+	private View.OnTouchListener handleTouch = new View.OnTouchListener() {
 
+	    @Override
+	    public boolean onTouch(View v, MotionEvent event) {
+
+	        int x = (int) event.getX();
+	        int y = (int) event.getY();
+
+	        switch (event.getAction()) {
+	            case MotionEvent.ACTION_DOWN:
+	                textView1.setText("touched DOWN:::: (" + x + ", " + y + ")");
+	    	    	v.performClick();
+	                myView.doTouchDown(x, y);
+	                break;
+	            case MotionEvent.ACTION_MOVE:
+	                textView1.setText("moving: (" + x + ", " + y + ")");
+	                myView.doMove(x, y);
+	                break;
+	            case MotionEvent.ACTION_UP:
+	                textView1.setText("touched up:::: (" + x + ", " + y + ")");
+	                myView.doTouchUp();
+	                break;
+	        }
+
+	        return true;
+	    }
+	};
+	
 }
